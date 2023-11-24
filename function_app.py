@@ -1,21 +1,28 @@
 import azure.functions as func
-import logging
 import qrcode
 from PIL import Image, ImageDraw
 import math
 import random
-from flask import Flask, request, jsonify,Response
-import os
 import io
 from urllib.parse import quote
 import string
 from azure.storage.blob import BlobServiceClient
+from dotenv import load_dotenv 
+import os
 
-storage_account_key = "5jcZFJnXTIBEKJIPSd/2e6Ht/KwGKlNfk/9Ja5cmu+1cahOeFkyU7a1dUzb0kIZza4G0u5hfedCZ+ASt4psqrQ=="
-connection_string = "DefaultEndpointsProtocol=https;AccountName=qrstoragefortest;AccountKey=5jcZFJnXTIBEKJIPSd/2e6Ht/KwGKlNfk/9Ja5cmu+1cahOeFkyU7a1dUzb0kIZza4G0u5hfedCZ+ASt4psqrQ==;EndpointSuffix=core.windows.net"
-sas_token = 'sp=r&st=2023-09-25T21:33:36Z&se=2023-09-26T05:33:36Z&sv=2022-11-02&sr=c&sig=jQ9OulguuwNQp0aPfS8Av1LxrxdmiIEesZrEd883qKA%3D'
-storage_account_name = "qrstoragefortest"
-container_name = "qrcontainer"
+load_dotenv()
+
+storage_account_key = os.environ.get("STORAGE_ACCOUNT_KEY")
+sas_token = os.environ.get("SAS_TOKEN")
+storage_account_name = os.environ.get("STORAGE_ACCOUNT_NAME")
+container_name = os.environ.get("CONTAINER_NAME")
+connection_string = os.environ.get("CONNECTION_STRING")
+
+# storage_account_key = str(os.environ["CUSTOMCONNSTR_STORAGE_ACCOUNT_KEY"])
+# sas_token = str(os.environ["CUSTOMCONNSTR_SAS_TOKEN"])
+# storage_account_name = str(os.environ["CUSTOMCONNSTR_STORAGE_ACCOUNT_NAME"])
+# container_name = str(os.environ["CUSTOMCONNSTR_CONTAINER_NAME"])
+# connection_string = str(os.environ["CUSTOMCONNSTR_CONNECTION_STRING"])
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -705,44 +712,11 @@ def drw_background_rectangels(gap_x,gap_y,width, height ,matrix_row, matrix_col,
                         continue
 
                     if not random_boolean:
-                        draw.rectangle((x - rectangle_size+gap_x, y - rectangle_size+gap_y, x + rectangle_size+gap_x, y + rectangle_size+gap_y), fill=background_color)
+                        draw.rectangle((x - rectangle_size+gap_x, y - rectangle_size+gap_y, x + rectangle_size+gap_x, y + rectangle_size+gap_y), fill="black",outline='gray')
 
                 row_data.append(random_boolean)
 
             background_data.append(row_data)
-
-        
-
-        for y in range(center_y - radius, center_y + radius, rectangle_spacing):
-            for x in range(center_x - radius, center_x + radius, rectangle_spacing):
-                distance = math.sqrt((x - center_x)**2 + (y - center_y)**2)
-                if distance <= radius and x < point_x1 and y < point_y1:
-                    if previos_y < len(background_data) and previos_x < len(background_data[1]):
-                        if background_data[previos_y][previos_x]:
-                            draw.rectangle((x - rectangle_size+gap_x, y - rectangle_size+gap_y, x + rectangle_size+gap_x, y + rectangle_size+gap_y), fill=module_color,outline='gray')
-
-                previos_x = previos_x + 1
-
-
-            previos_y = previos_y + 1
-            previos_x = 0
-
-        previos_y = len(background_data)-1
-        previos_x = len(background_data[1])-1
-
-        for y in range(center_y + radius, center_y - radius, -1*rectangle_spacing):
-            for x in range(center_x + radius, center_x - radius, -1*rectangle_spacing):
-                distance = math.sqrt((x - center_x)**2 + (y - center_y)**2)
-                if distance <= radius and x > point_x2 and y > point_y2:
-                    if previos_y < len(background_data) and previos_x < len(background_data[1]):
-                        if background_data[previos_y][previos_x]:
-                            draw.rectangle((x - rectangle_size+gap_x, y - rectangle_size+gap_y, x + rectangle_size+gap_x, y + rectangle_size+gap_y), fill=module_color,outline='gray')
-
-                previos_x = previos_x -1 
-
-
-            previos_y = previos_y - 1
-            previos_x = len(background_data[1])-1
 
 def draw_large_rectangle_around_image(row, col, width, height, draw,background_color):
 
@@ -803,11 +777,11 @@ def template_01(data,finder_patern_number,module_patern,module_color,background_
         for col in range(width):
             if matrix[row][col] and flag:
                     if finder_patern_number == '1':
-                        drw_finder_patern_01(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color)
+                        drw_finder_patern_01(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color,background_color)
                     elif finder_patern_number == '2':
                         drw_finder_patern_02(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color,background_color)
                     elif finder_patern_number == '3':
-                       drw_finder_patern_03(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color,background_color)
+                        drw_finder_patern_03(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color,background_color)
                     elif finder_patern_number == '4':
                         drw_finder_patern_04(gap_x,gap_y,row,col,len(matrix[0]), len(matrix),draw,module_color,background_color)
                     flag = False
@@ -969,6 +943,19 @@ def template_04(data,finder_patern_number,module_patern,module_color,background_
     avoid_rect = [((finder_pattern_row - 1)*10, (finder_pattern_col - 1)*10), ((width-finder_pattern_row + 1)*10+9, (height-finder_pattern_col + 1)*10+9)]
     drw_circle_around_qr(radius,draw, module_color,background_color)
     drw_background_rectangels(gap_x,gap_y,width, height ,finder_pattern_row, finder_pattern_col,draw,avoid_rect,module_color,background_color)
+
+    if module_patern == '1':
+        gap_xt  = gap_xt - 5
+        gap_yt  = gap_yt - 5
+
+    if module_patern == '2' or module_patern == '3' or module_patern == '5':
+        gap_xt  = gap_xt - 4
+        gap_yt  = gap_yt - 4
+
+    if module_patern == '4' or module_patern == '6':
+        gap_xt  = gap_xt - 3
+        gap_yt  = gap_yt - 3
+
 
     if module_patern == '6':
          drw_line_modules(gap_xt,gap_yt,height,width,finder_pattern_col,finder_pattern_row,matrix,draw,module_color)
@@ -1267,30 +1254,12 @@ def template_08(data,finder_patern_number,module_patern,module_color,background_
     return img,draw
 
 
-@app.route(route="http_qr", methods=['POST'])
-def http_qr(req: func.HttpRequest) -> func.HttpResponse:
-    # logging.info('Python HTTP trigger function processed a request.')
-
-    # name = req.params.get('name')
-    # if not name:
-    #     try:
-    #         req_body = req.get_json()
-    #     except ValueError:
-    #         pass
-    #     else:
-    #         name = req_body.get('name')
-
-    # if name:
-    #     return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
-    # else:
-    #     return func.HttpResponse(
-    #          "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-    #          status_code=200
-    #     )
+@app.route(route="generate-qr")
+def generate_qr(req: func.HttpRequest) -> func.HttpResponse:
     data = req.form.get('data')
     data_type = req.form.get('data_type')
     module_color = req.form.get('module_color')
-    background_color = req.form.get('background_color')
+    background_color = req.form.get('background_color') 
     module_patern = req.form.get('module_patern')
     template_number = req.form.get('template_number')
     finder_patern_number = req.form.get('finder_patern_number')
@@ -1375,3 +1344,4 @@ def http_qr(req: func.HttpRequest) -> func.HttpResponse:
 
     download_link = f"https://{storage_account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
     return func.HttpResponse(download_link, status_code=200)
+    
