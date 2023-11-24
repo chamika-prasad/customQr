@@ -18,12 +18,6 @@ storage_account_name = os.environ.get("STORAGE_ACCOUNT_NAME")
 container_name = os.environ.get("CONTAINER_NAME")
 connection_string = os.environ.get("CONNECTION_STRING")
 
-# storage_account_key = str(os.environ["CUSTOMCONNSTR_STORAGE_ACCOUNT_KEY"])
-# sas_token = str(os.environ["CUSTOMCONNSTR_SAS_TOKEN"])
-# storage_account_name = str(os.environ["CUSTOMCONNSTR_STORAGE_ACCOUNT_NAME"])
-# container_name = str(os.environ["CUSTOMCONNSTR_CONTAINER_NAME"])
-# connection_string = str(os.environ["CUSTOMCONNSTR_CONNECTION_STRING"])
-
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 def initial_qr_setup(data):
